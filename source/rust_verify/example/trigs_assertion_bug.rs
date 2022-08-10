@@ -1,22 +1,16 @@
 #![allow(unused_imports)]
-use builtin_macros::{verus};
-use builtin::*;
+use builtin_macros::verus;
+use builtin::int;
 mod pervasive;
-use pervasive::{*, vec::Vec, option::*};
-use crate::seq::Seq;
+use pervasive::vec::Vec;
 
 verus! {
-  fn binary_search(v: &Vec<u64>) -> (r:Option<usize>)
-    ensures
-      match r {
-        Option::Some(i) => true,
-        Option::None => forall |i: int| v@[i] == 3u64,
-      }
+  fn binary_search(v: &Vec<bool>)
+    ensures forall |i: int| v@[i],
   {
     if false {
-      return Option::Some(0);
+      return;
     }
-    Option::None
   }
 
   fn main() {}
