@@ -2,7 +2,7 @@
 use builtin_macros::{verus};
 use builtin::*;
 mod pervasive;
-use pervasive::{*, vec::Vec};
+use pervasive::{*, vec::Vec, option::*};
 use crate::seq::Seq;
 
 verus! {
