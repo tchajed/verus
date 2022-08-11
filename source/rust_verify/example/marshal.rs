@@ -25,13 +25,14 @@ mod enc {
     pub proof fn axiom_u64_from_le_bytes_ok(x: u64)
       ensures u64_from_le_bytes(u64_le_bytes(x)) === x;
 
+    #[verifier(external_body)]
     pub fn store_le_bytes(buf: &mut Vec<u8>, off: usize, x: u64)
       requires off + 8 <= old(buf).len()
       ensures buf@ === old(buf)@.subrange(0, off).add(
         u64_le_bytes(x)
       ).add(old(buf)@.subrange(off+8, old(buf)@.len()))
     {
-      assume(false);
+      buf.vec[off..off+8].copy_from_slice(&x.to_le_bytes());
     }
 
     fn test_store_le_bytes(buf: &mut Vec<u8>, off: usize, x: u64)
