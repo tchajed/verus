@@ -26,6 +26,13 @@ verus! {
     set_fold(s, |x, y| max(x, y), 0, s.len())
   }
 
+  // NOTE: this must be assumed for the proof to go through
+  #[verifier(external_body)]
+  proof fn len_0_empty<A>(s: Set<A>)
+    requires s.len() == 0
+    ensures s === Set::empty()
+  {}
+
   pub proof fn set_max_fold_ok(s: Set<nat>, count: nat)
     requires
       s.finite(),
@@ -34,7 +41,7 @@ verus! {
   {
     decreases(count);
     if s.len() == 0 {
-      assume(s === Set::empty());
+      len_0_empty::<nat>(s);
     } else {
       let x = s.choose();
       set_max_fold_ok(s.remove(x), (count-1) as nat);
