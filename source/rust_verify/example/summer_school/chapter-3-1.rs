@@ -29,6 +29,7 @@ verus! {
 
     spec fn restock(self, c: Constants, next: Self, num_restock: int) -> bool {
       // precondition
+      &&& 0 <= num_restock
       &&& self.num_cokes + num_restock <= c.capacity
       // transition
       &&& next == CokeMachine { num_cokes: self.num_cokes + num_restock }
@@ -49,6 +50,15 @@ verus! {
       forall |c: Constants, v: CokeMachine| v.init(c) ==> v.inv(c),
       forall |c: Constants, v1: CokeMachine, v2: CokeMachine| v1.inv(c) ==> v1.next(c, v2) ==> v2.inv(c),
   {
+    assert_forall_by(|c, v1: CokeMachine, v2|
+    {
+      requires(v1.inv(c) && v1.next(c, v2));
+      ensures(v2.inv(c));
+      if v1.purchase(c, v2) {
+      } else {
+        let num = choose |num: int| v1.restock(c, v2, num);
+      }
+    })
   }
 
   fn main() {}
