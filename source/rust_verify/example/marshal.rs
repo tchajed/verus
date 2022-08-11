@@ -13,6 +13,8 @@ mod enc {
   use super::pervasive::{*, vec::*};
   use crate::seq::Seq;
 
+  use std::convert::TryInto;
+
   verus! {
     pub closed spec fn u64_le_bytes(x: u64) -> Seq<u8>;
     pub closed spec fn u64_from_le_bytes(s: Seq<u8>) -> u64;
@@ -46,12 +48,12 @@ mod enc {
       }
     }
 
+    #[verifier(external_body)]
     pub fn get_le_bytes(buf: &Vec<u8>, off: usize) -> (r:u64)
       requires off + 8 <= buf.len()
       ensures r === u64_from_le_bytes(buf@.subrange(off, off+8))
     {
-      assume(false);
-      0
+      u64::from_le_bytes(buf.vec[off..off+8].try_into().unwrap())
     }
 
   }
