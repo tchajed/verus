@@ -10,27 +10,30 @@ use std::ops::Index;
 
 verus! {
 
-  // TODO: how do I put requires/ensures on these spec functions? (these should
-  // only be length-8 sequences)
   spec fn u64_le_bytes(x: u64) -> Seq<u8>;
-  spec fn u64_from_le_bytes(b: Seq<u8>) -> u64;
+  spec fn u64_from_le_bytes(s: Seq<u8>) -> u64;
 
-  // TODO: how to get the model of a slice?
-  spec fn slice_seq(r: &[u8]) -> Seq<u8>;
+  #[verifier(external_body)]
+  proof fn axiom_u64_le_bytes(x: u64)
+    ensures u64_le_bytes(x).len() == 8;
 
-  fn to_le_bytes64(x: u64) -> (r:[u8; 8])
-    ensures slice_seq(r.index(..)) === u64_le_bytes(x)
+  #[verifier(external_body)]
+  proof fn axiom_u64_from_le_bytes_ok(x: u64)
+    ensures u64_from_le_bytes(u64_le_bytes(x)) === x;
+
+  fn store_le_bytes(buf: &mut Vec<u8>, off: usize, x: u64)
+    requires off + 8 <= old(buf).len()
+    ensures buf@.subrange(off, off+8) === u64_le_bytes(x)
   {
     assume(false);
-    proof_from_false()
   }
 
-  fn from_le_bytes64(bs: &[u8]) -> (r:u64)
-    requires bs.len() == 8
-    ensures r == u64_from_le_bytes(slice_seq(bs))
+  fn get_le_bytes(buf: &Vec<u8>, off: usize) -> (r:u64)
+    requires off + 8 <= buf.len()
+    ensures r === u64_from_le_bytes(buf@.subrange(off, off+8))
   {
     assume(false);
-    proof_from_false()
+    0
   }
 
   struct Encoder {
