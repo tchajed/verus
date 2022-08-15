@@ -5,62 +5,51 @@ use builtin::*;
 mod pervasive;
 use pervasive::*;
 use pervasive::set::*;
+use pervasive::set_lib::lemma_len0_is_empty;
 
 verus! {
-  pub open spec fn set_fold<T, R, F: Fn(T, R) -> R>(s: Set<T>, f: F, zero: R, count: nat) -> R {
-      decreases(count);
-      if count == 0 {
-          zero
+  impl<A> Set<A> {
+    pub open spec fn right_fold<R, F: Fn(A, R) -> R>(self, f: F, init: R) -> R
+      decreases self.len()
+    {
+      if self.finite() {
+        if self.len() == 0 {
+            init
+        } else {
+            let x = self.choose();
+            f(x, self.remove(x).right_fold(f, init))
+        }
       } else {
-          let x = s.choose();
-          f(x, set_fold(s.remove(x), f, zero, (count-1) as nat))
+        init
       }
-  }
-
-  pub open spec fn max(n: nat, m: nat) -> nat {
-    if n > m { n } else { m }
+    }
   }
 
   pub open spec fn set_max(s: Set<nat>) -> (m: nat)
   {
-    set_fold(s, |x, y| max(x, y), 0, s.len())
+    s.right_fold(|x, y| if x > y { x } else { y }, 0)
   }
 
-  // NOTE: this must be assumed for the proof to go through
-  #[verifier(external_body)]
-  proof fn len_0_empty<A>(s: Set<A>)
-    requires s.len() == 0
-    ensures s === Set::empty()
-  {}
-
-  pub proof fn set_max_fold_ok(s: Set<nat>, count: nat)
+  pub proof fn set_max_ok(s: Set<nat>)
     requires
       s.finite(),
-      count == s.len(),
-    ensures forall |n: nat| s.contains(n) ==> set_fold(s, |x, y| max(x, y), 0, count) >= n
+    ensures forall |n: nat| s.contains(n) ==> set_max(s) >= n,
+    decreases s.len(),
   {
-    decreases(count);
     if s.len() == 0 {
-      len_0_empty::<nat>(s);
+      lemma_len0_is_empty::<nat>(s);
     } else {
       let x = s.choose();
-      set_max_fold_ok(s.remove(x), (count-1) as nat);
+      set_max_ok(s.remove(x));
       assert_forall_by(|n: nat| {
         requires(s.contains(n));
-        ensures(set_fold(s, |x, y| max(x, y), 0, count) >= n);
+        ensures(set_max(s) >= n);
         if x != n {
           assert(s.remove(x).contains(n));
         } else {
         }
       })
     }
-  }
-
-  pub proof fn set_max_ok(s: Set<nat>)
-    requires s.finite()
-    ensures forall |n: nat| s.contains(n) ==> set_max(s) >= n
-  {
-    set_max_fold_ok(s, s.len());
   }
 
   pub closed spec fn get_new_nat(s: Set<nat>) -> nat
