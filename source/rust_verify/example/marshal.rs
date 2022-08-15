@@ -1,62 +1,62 @@
 #![allow(unused_imports)]
 
-use builtin_macros::*;
 use builtin::*;
+use builtin_macros::*;
 mod pervasive;
-use pervasive::{*, vec::Vec, option::*};
 use crate::seq::Seq;
+use pervasive::{option::*, vec::Vec, *};
 use std::ops::Index;
 
 mod enc {
-  use builtin_macros::*;
-  use builtin::*;
-  use super::pervasive::{*, vec::*};
-  use crate::seq::Seq;
+    use super::pervasive::{vec::*, *};
+    use crate::seq::Seq;
+    use builtin::*;
+    use builtin_macros::*;
 
-  use std::convert::TryInto;
+    use std::convert::TryInto;
 
-  verus! {
-    pub closed spec fn u64_le_bytes(x: u64) -> Seq<u8>;
-    pub closed spec fn u64_from_le_bytes(s: Seq<u8>) -> u64;
+    verus! {
+      pub closed spec fn u64_le_bytes(x: u64) -> Seq<u8>;
+      pub closed spec fn u64_from_le_bytes(s: Seq<u8>) -> u64;
 
-    #[verifier(external_body)]
-    pub proof fn axiom_u64_le_bytes(x: u64)
-      ensures u64_le_bytes(x).len() == 8;
+      #[verifier(external_body)]
+      pub proof fn axiom_u64_le_bytes(x: u64)
+        ensures u64_le_bytes(x).len() == 8;
 
-    #[verifier(external_body)]
-    pub proof fn axiom_u64_from_le_bytes_ok(x: u64)
-      ensures u64_from_le_bytes(u64_le_bytes(x)) === x;
+      #[verifier(external_body)]
+      pub proof fn axiom_u64_from_le_bytes_ok(x: u64)
+        ensures u64_from_le_bytes(u64_le_bytes(x)) === x;
 
-    #[verifier(external_body)]
-    pub fn store_le_bytes(buf: &mut Vec<u8>, off: usize, x: u64)
-      requires off + 8 <= old(buf).len()
-      ensures buf@ === old(buf)@.subrange(0, off).add(
-        u64_le_bytes(x)
-      ).add(old(buf)@.subrange(off+8, old(buf)@.len()))
-    {
-      buf.vec[off..off+8].copy_from_slice(&x.to_le_bytes());
-    }
-
-    fn test_store_le_bytes(buf: &mut Vec<u8>, off: usize, x: u64)
-      requires off + 8 <= old(buf).len()
-    {
-      proof { let data = buf@; }
-      store_le_bytes(buf, off, x);
-      proof {
-        axiom_u64_le_bytes(x);
-        assert( buf@.len() === old(buf)@.len() );
+      #[verifier(external_body)]
+      pub fn store_le_bytes(buf: &mut Vec<u8>, off: usize, x: u64)
+        requires off + 8 <= old(buf).len()
+        ensures buf@ === old(buf)@.subrange(0, off).add(
+          u64_le_bytes(x)
+        ).add(old(buf)@.subrange(off+8, old(buf)@.len()))
+      {
+        buf.vec[off..off+8].copy_from_slice(&x.to_le_bytes());
       }
-    }
 
-    #[verifier(external_body)]
-    pub fn get_le_bytes(buf: &Vec<u8>, off: usize) -> (r:u64)
-      requires off + 8 <= buf.len()
-      ensures r === u64_from_le_bytes(buf@.subrange(off, off+8))
-    {
-      u64::from_le_bytes(buf.vec[off..off+8].try_into().unwrap())
-    }
+      fn test_store_le_bytes(buf: &mut Vec<u8>, off: usize, x: u64)
+        requires off + 8 <= old(buf).len()
+      {
+        proof { let data = buf@; }
+        store_le_bytes(buf, off, x);
+        proof {
+          axiom_u64_le_bytes(x);
+          assert( buf@.len() === old(buf)@.len() );
+        }
+      }
 
-  }
+      #[verifier(external_body)]
+      pub fn get_le_bytes(buf: &Vec<u8>, off: usize) -> (r:u64)
+        requires off + 8 <= buf.len()
+        ensures r === u64_from_le_bytes(buf@.subrange(off, off+8))
+      {
+        u64::from_le_bytes(buf.vec[off..off+8].try_into().unwrap())
+      }
+
+    }
 }
 
 verus! {
