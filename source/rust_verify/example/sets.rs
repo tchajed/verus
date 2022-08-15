@@ -75,17 +75,48 @@ verus! {
       s.map(f) === map_fold(s, f),
     decreases s.len(),
   {
-    if s.len() === 0 {
+    if s.len() == 0 {
       lemma_len0_is_empty::<A>(s);
+      assert_sets_equal!(s.map(f), Set::empty());
     } else {
       let a = s.choose();
-      lemma_map_as_fold(s.remove(a), f);
+      lemma_map_as_fold::<A, B, F>(s.remove(a), f);
 
-      // assert(
-      //   map_fold(s.remove(a), f) ===
-      //   s.remove(a).right_fold(|ss, x| ss.insert(f(x)), Set::empty()).insert(f(a))
-      // );
-      assume(false);
+      assert(
+        map_fold(s, f) ===
+        map_fold(s.remove(a), f).insert(f(a))
+      );
+      assert(
+        map_fold(s, f) === s.remove(a).map(f).insert(f(a))
+      );
+
+      let ms1 = map_fold(s, f);
+      let ms2 = s.map(f);
+
+      if s.remove(a).map(f).contains(f(a)) {
+        assert(ms1.subset_of(ms2)); // obvious
+        assert_forall_by(|b| {
+          requires(s.map(f).contains(b));
+          ensures(map_fold(s, f).contains(b));
+          let a2 = choose |a2:A| s.contains(a2) && b === f(a2); // def of map
+          if a !== a2 {
+            assert(s.remove(a).contains(a2));
+          }
+        });
+        assert(ms2.subset_of(ms1));
+        assert_sets_equal!(ms1, ms2);
+      } else {
+        assert(ms1.subset_of(ms2)); // obvious
+        assert_forall_by(|b| {
+          requires(s.map(f).contains(b));
+          ensures(map_fold(s, f).contains(b));
+          let a2 = choose |a2:A| s.contains(a2) && b === f(a2); // def of map
+          if a !== a2 {
+            assert(s.remove(a).contains(a2));
+          }
+        });
+        assert_sets_equal!(ms1, ms2);
+      }
     }
   }
 
