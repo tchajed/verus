@@ -120,48 +120,25 @@ verus! {
     }
   }
 
-  /*
   pub proof fn lemma_len_map<A, B, F: Fn(A) -> B>(s: Set<A>, f: F)
       requires
           s.finite(),
       ensures
+          s.map(f).finite(),
           s.map(f).len() <= s.len(),
       decreases
           s.len(),
   {
+      lemma_map_as_fold::<A, B, F>(s, f);
       if s.len() == 0 {
-        assert(s.len() == 0);
         lemma_len0_is_empty::<A>(s);
-        assert(s.map(f).ext_equal(Set::empty()));
         return;
       }
 
       let a = s.choose();
       lemma_len_map::<A, B, F>(s.remove(a), f);
-      assert(s.remove(a).map(f).len() <= s.len() - 1);
-      if exists|a2: A| s.remove(a).contains(a2) && f(a2) === f(a) {
-        let a2 = choose |a2: A| s.remove(a).contains(a2) && f(a2) === f(a);
-        assert_forall_by(|b|
-        {
-          requires(#[auto_trigger] s.map(f).contains(b));
-          ensures(#[auto_trigger] s.remove(a).map(f).contains(b));
-          let b_a = choose |b_a:A| s.contains(b_a) && b === f(b_a);
-          if b_a === a {
-            assert(s.remove(a).contains(a2));
-            assert(f(b_a) === f(a2));
-            assert(s.remove(a).map(f).contains(f(b_a)));
-          } else {
-            assert(s.remove(a).contains(b_a));
-            assert(s.remove(a).map(f).contains(f(b_a)));
-          }
-        });
-        lemma_len_subset::<B>(s.map(f), s.remove(a).map(f));
-        // assert_sets_equal!(s.remove(a).map(f), s.map(f));
-      } else {
-        assert_sets_equal!(s.remove(a).map(f), s.map(f).remove(f(a)));
-      }
+      lemma_map_as_fold::<A, B, F>(s.remove(a), f);
   }
-  */
 
   fn main() {}
 }
