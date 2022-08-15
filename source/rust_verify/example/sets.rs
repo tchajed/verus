@@ -6,10 +6,13 @@ mod pervasive;
 use pervasive::*;
 use pervasive::set::*;
 use pervasive::set_lib::{lemma_len0_is_empty, lemma_len_subset};
+use pervasive::seq::*;
+use pervasive::seq_lib::*;
 
 verus! {
   impl<A> Set<A> {
     pub open spec fn right_fold<R, F: Fn(A, R) -> R>(self, f: F, init: R) -> R
+      recommends self.finite()
       decreases self.len()
     {
       if self.finite() {
@@ -138,6 +141,62 @@ verus! {
       let a = s.choose();
       lemma_len_map::<A, B, F>(s.remove(a), f);
       lemma_map_as_fold::<A, B, F>(s.remove(a), f);
+  }
+
+  pub open spec fn elements<A>(s: Set<A>) -> Seq<A> {
+    s.right_fold(|x, xs| xs.push(x), seq![])
+  }
+
+  pub proof fn elements_len<A>(s: Set<A>)
+    requires
+      s.finite(),
+    ensures
+      elements(s).len() == s.len(),
+    decreases s.len()
+  {
+    if s.len() == 0 {
+      lemma_len0_is_empty::<A>(s);
+    } else {
+      let a = s.choose();
+      elements_len::<A>(s.remove(a));
+    }
+  }
+
+  pub proof fn elements_contains<A>(s: Set<A>)
+    requires s.finite(),
+    ensures forall |x:A| #[auto_trigger] s.contains(x) <==> elements(s).contains(x)
+    decreases s.len()
+  {
+    if s.len() == 0 {
+      lemma_len0_is_empty::<A>(s);
+    } else {
+      let a = s.choose();
+      elements_contains::<A>(s.remove(a));
+      elements_len::<A>(s.remove(a));
+
+      assert(elements(s).last() === a);
+
+      assert_forall_by(|x: A| {
+        requires(#[auto_trigger] s.contains(x));
+        ensures(#[auto_trigger] elements(s).contains(x));
+
+        if x !== a {
+          assert(s.remove(a).contains(x));
+          let i = choose |i:int| 0 <= i < s.len() - 1 && elements(s.remove(a))[i] === x;
+          assert(elements(s)[i] === elements(s.remove(a))[i]);
+        }
+
+      });
+
+      assert_forall_by(|x: A| {
+        requires(#[auto_trigger] elements(s).contains(x));
+        ensures(#[auto_trigger] s.contains(x));
+
+        if x !== a {
+          assert(s.remove(a).contains(x));
+        }
+      });
+    }
   }
 
   fn main() {}
