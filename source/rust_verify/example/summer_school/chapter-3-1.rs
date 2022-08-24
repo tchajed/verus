@@ -61,6 +61,25 @@ verus! {
     })
   }
 
+  proof fn non_trivial_purchase()
+    ensures exists |c, v1: CokeMachine, v2| v1.inv(c) && v1.next(c, v2) && v2.num_cokes + 1 == v1.num_cokes
+  {
+    let c = Constants { capacity: 7 };
+    let v1 = CokeMachine { num_cokes: 1 };
+    let v2 = CokeMachine { num_cokes: 0 };
+    assert(v1.inv(c) && v1.next(c, v2) && v2.num_cokes + 1 == v1.num_cokes);
+  }
+
+  proof fn non_trivial_restock()
+    ensures exists |c, v1: CokeMachine, v2| v1.inv(c) && v1.next(c, v2) && v1.num_cokes < v2.num_cokes
+  {
+    let c = Constants { capacity: 7 };
+    let v1 = CokeMachine { num_cokes: 4 };
+    let v2 = CokeMachine { num_cokes: 7 };
+    assert(v1.restock(c, v2, 3));
+    assert(v1.inv(c) && v1.next(c, v2) && v1.num_cokes < v2.num_cokes);
+  }
+
   fn main() {}
 
 } // verus!
