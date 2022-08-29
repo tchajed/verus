@@ -43,23 +43,18 @@ verus! {
           perms@.dom() === Set::new(|n: nat| n < i),
           Allocator { block, perms }.wf(),
         ]);
-        let old_perms: Ghost<Map<nat, PermissionOpt<V>>> = ghost(perms@);
-        assert(old_perms@.dom() === Set::new(|n: nat| n < i));
         let (p, perm) = PPtr::empty();
         block.push(p);
-        i = i + 1;
 
         proof {
           // what a mess! can't even let-bind perms.borrow_mut(), results in an
           // error
           (tracked perms.borrow_mut())
             .tracked_insert(i as nat, (tracked perm).get());
-          assert_sets_equal!(perms.view().dom(), old_perms.view().dom().insert(i));
-          assert(!old_perms@.dom().contains(i as nat));
-          assert(old_perms@.dom() === Set::new(|n: nat| n < (i-1) as nat));
-          set_insert_contains::<nat>(Set::new(|n: nat| n < (i-1) as nat), i as nat);
-          assert_sets_equal!(perms.view().dom(), Set::new(|n: nat| n < i as nat));
+          assert_sets_equal!(perms.view().dom(), Set::new(|n: nat| n < i+1 as nat));
         }
+
+        i = i + 1;
       }
       Allocator { block, perms }
     }
