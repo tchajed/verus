@@ -70,6 +70,8 @@ verus! {
       Allocator { block, perms, next: 0 }
     }
 
+    // TODO: currently takes &mut self, but allocation should work concurrently
+    // with only `&self`.
     fn alloc(&mut self) -> (rv: Option<(&PPtr<V>, Tracked<PermissionOpt<V>>)>)
     requires old(self).wf()
     ensures
@@ -77,6 +79,11 @@ verus! {
       self.wf(),
       self.block@.len() == old(self).block@.len()
     {
+      // TODO: need to do faa(&mut self.next, 1) and atomically update perm
+      // to also check for enough space, the atomically block can return both
+      // the old `next` value and an Option<Tracked<PermissionData>>, which will
+      // be None if there wasn't enough space. In exec code we can determine if
+      // there was enough space based on the value of `next`, as below.
       let next = self.next;
       if next >= self.block.len() {
         // out of space
