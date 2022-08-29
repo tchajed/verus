@@ -3,29 +3,63 @@
 use builtin_macros::*;
 use builtin::*;
 mod pervasive;
-use pervasive::{*, ptr::*, map::*, vec::*};
+use pervasive::{*, ptr::*, map::*, vec::*, set::*};
 
 verus! {
+  pub proof fn set_insert_contains<V>(s: Set<V>, a: V)
+    ensures forall |x: V| s.contains(x) == s.contains(x) || x === a
+  {
+    assert_forall_by(|x: V| {
+      ensures(s.contains(x) == s.contains(x) || x === a);
+      if x === a {}
+    })
+  }
+
   struct Allocator<V> {
     block: Vec<PPtr<V>>,
     perms: Tracked<Map<nat, PermissionOpt<V>>>,
   }
 
   impl<V> Allocator<V> {
-    fn new(size: usize) -> Self {
-      let mut block = Vec::new();
+    closed spec fn wf(self) -> bool {
+      &&& self.perms@.dom() === Set::new(|n: nat| n < self.block.len())
+      &&& self.perms@.dom().finite()
+    }
+
+    fn new(size: usize) -> (v:Self)
+      ensures v.wf()
+    {
+      let mut block: Vec<PPtr<V>> = Vec::new();
       let mut perms = tracked(Map::tracked_empty());
-      let mut i = 0;
-      while i < size {
+      proof {
+        assert(perms@.dom() === Set::empty());
+        assert_sets_equal!(Set::new(|n: nat| n < 0), Set::empty());
+      }
+      let mut i: usize = 0;
+      while i < size
+      {
+        invariant([
+          block.len() == i,
+          perms@.dom() === Set::new(|n: nat| n < i),
+          Allocator { block, perms }.wf(),
+        ]);
+        let old_perms: Ghost<Map<nat, PermissionOpt<V>>> = ghost(perms@);
+        assert(old_perms@.dom() === Set::new(|n: nat| n < i));
         let (p, perm) = PPtr::empty();
         block.push(p);
+        i = i + 1;
+
         proof {
           // what a mess! can't even let-bind perms.borrow_mut(), results in an
           // error
           (tracked perms.borrow_mut())
             .tracked_insert(i as nat, (tracked perm).get());
+          assert_sets_equal!(perms.view().dom(), old_perms.view().dom().insert(i));
+          assert(!old_perms@.dom().contains(i as nat));
+          assert(old_perms@.dom() === Set::new(|n: nat| n < (i-1) as nat));
+          set_insert_contains::<nat>(Set::new(|n: nat| n < (i-1) as nat), i as nat);
+          assert_sets_equal!(perms.view().dom(), Set::new(|n: nat| n < i as nat));
         }
-        i = i + 1;
       }
       Allocator { block, perms }
     }
