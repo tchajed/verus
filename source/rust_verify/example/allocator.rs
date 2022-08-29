@@ -3,7 +3,8 @@
 use builtin_macros::*;
 use builtin::*;
 mod pervasive;
-use pervasive::{*, ptr::*, map::*, vec::*, set::*};
+use pervasive::{*, ptr::*, map::*, vec::*, set::*, option::*};
+use pervasive::option::Option::*;
 
 verus! {
   pub proof fn set_insert_contains<V>(s: Set<V>, a: V)
@@ -23,11 +24,15 @@ verus! {
   }
 
   impl<V> Allocator<V> {
+    closed spec fn wf_perm_ids(self) -> bool {
+      forall |i: int| #[auto_trigger] self.next <= i < self.block@.len() ==>
+            self.block@[i].id() == self.perms@[i as nat]@.pptr && self.block@[i].id() != 0
+    }
+
     closed spec fn wf(self) -> bool {
-      &&& self.perms@.dom() === Set::new(|n: nat| self.next <= n < self.block.len())
+      &&& self.perms@.dom() === Set::new(|n: nat| self.next <= n < self.block@.len())
       &&& self.perms@.dom().finite()
-      &&& (forall |i: int| #[auto_trigger] 0 <= i < self.block.len() ==>
-            self.block@[i].id() == self.perms@[i as nat]@.pptr && self.block@[i].id() != 0)
+      &&& self.wf_perm_ids()
     }
 
     fn new(size: usize) -> (v:Self)
@@ -43,7 +48,7 @@ verus! {
       while i < size
       {
         invariant([
-          block.len() == i,
+          block@.len() == i,
           Allocator { block, perms, next: 0 }.wf(),
         ]);
         let (p, perm) = PPtr::empty();
@@ -63,6 +68,31 @@ verus! {
         i = i + 1;
       }
       Allocator { block, perms, next: 0 }
+    }
+
+    fn alloc(&mut self) -> (rv: Option<(&PPtr<V>, Tracked<PermissionOpt<V>>)>)
+    requires old(self).wf()
+    ensures
+      rv.is_Some() ==> rv.get_Some_0().0.id() == rv.get_Some_0().1@@.pptr,
+      self.wf(),
+      self.block@.len() == old(self).block@.len()
+    {
+      let next = self.next;
+      if next >= self.block.len() {
+        // out of space
+        return None;
+      }
+      let p = self.block.index(next);
+      self.next = next + 1;
+      let perm: Tracked<PermissionOpt<V>> = tracked((tracked self.perms.borrow_mut()).tracked_remove(next));
+      assert(perm@@.pptr === p.id());
+      proof {
+        assert_sets_equal!(
+        self.perms.view().dom(),
+        Set::new(|n: nat| (next + 1) as nat <= n && n < self.block.view().len()));
+        assert(self.wf_perm_ids());
+      }
+      return Some((p, perm));
     }
   }
 
