@@ -61,7 +61,7 @@ verus! {
           (tracked perms.borrow_mut())
             .tracked_insert(i as nat, tracked perm);
           assert_sets_equal!(
-            perms.view().dom(),
+            perms@.dom(),
             Set::new(|n: nat| 0 <= n && n < i+1 as nat));
         }
 
@@ -88,8 +88,8 @@ verus! {
       assert(perm@@.pptr === p.id());
       proof {
         assert_sets_equal!(
-        self.perms.view().dom(),
-        Set::new(|n: nat| (next + 1) as nat <= n && n < self.block.view().len()));
+        self.perms@.dom(),
+        Set::new(|n: nat| (next + 1) as nat <= n && n < self.block@.len()));
         assert(self.wf_perm_ids());
       }
       return Some((p, perm));
