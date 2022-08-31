@@ -121,9 +121,10 @@ verus! {
           assume(k * i <= k * (s.len() - 1));
           assert(k * i <= k * s.len() - k);
           assert(k * i + j < k * s.len());
-          assert(k * i + j < concat(s).len());
           assert(k * i + j === k + k * (i - 1) + j);
           assert(s[0].len() == k);
+          // TODO: even after proving this, the recommends check fails
+          assert(k * i + j < concat(s).len());
           assert(concat(s)[k * i + j] === concat(s)[k + k * (i - 1) + j]);
           assert(concat(s)[k + k * (i-1) + j] === concat(s.subrange(1, s.len()))[k * (i - 1) + j]);
           lemma_concat_uniform_index::<T>(s.subrange(1, s.len()), k);
